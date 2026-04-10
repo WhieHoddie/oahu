@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oahu</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --surface: #111418;
+    --surface2: #181c22;
+    --border: #1e242e;
+    --green: #00e676;
+    --red: #ff3d57;
+    --gold: #f5c842;
+    --text: #e8eaf0;
+    --muted: #5a6070;
+    --accent: #2979ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+
+  /* ── LOGIN PAGE ── */
+  #loginPage {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh;
+    background: radial-gradient(ellipse at 60% 40%, #1a1f2e 0%, #0a0c0f 70%);
+  }
+  .login-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 48px 40px;
+    width: 380px;
+    max-width: 92vw;
+    animation: fadeUp 0.4s ease;
+  }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+  .login-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    letter-spacing: 4px;
+    color: var(--gold);
+    margin-bottom: 6px;
+  }
+  .login-sub { font-size: 13px; color: var(--muted); margin-bottom: 36px; }
+  .form-group { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 6px; }
+  input[type="email"], input[type="password"], input[type="text"], input[type="number"] {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    color: var(--text); padding: 10px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 14px; border-radius: 6px; outline: none; transition: border-color 0.2s;
+  }
+  input:focus { border-color: var(--accent); }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 11px 20px; border-radius: 6px; font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; width: 100%; }
+  .btn-primary:hover { background: #3d8bff; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+  .btn-green { background: rgba(0,230,118,0.12); color: var(--green); border: 1px solid rgba(0,230,118,0.3); flex:1; }
+  .btn-green:hover { background: rgba(0,230,118,0.2); }
+  .btn-red { background: rgba(255,61,87,0.1); color: var(--red); border: 1px solid rgba(255,61,87,0.3); flex:1; }
+  .btn-red:hover { background: rgba(255,61,87,0.2); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .error-msg { background: rgba(255,61,87,0.1); border: 1px solid rgba(255,61,87,0.3); color: var(--red); padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-bottom: 16px; display: none; }
+
+  /* ── APP ── */
+  #appPage { display: none; }
+
+  header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 0 32px; display: flex; align-items: center; justify-content: space-between;
+    height: 64px; position: sticky; top: 0; z-index: 100;
+  }
+  .logo { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 3px; color: var(--gold); display: flex; align-items: center; gap: 10px; }
+  .logo span { color: var(--text); font-size: 20px; letter-spacing: 1px; }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .user-pill { background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 5px 14px; font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .admin-badge { background: rgba(245,200,66,0.15); color: var(--gold); border: 1px solid rgba(245,200,66,0.3); border-radius: 4px; padding: 2px 8px; font-size: 10px; font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: 1px; }
+  .viewer-badge { background: rgba(41,121,255,0.15); color: var(--accent); border: 1px solid rgba(41,121,255,0.3); border-radius: 4px; padding: 2px 8px; font-size: 10px; font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: 1px; }
+
+  .summary-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); border-bottom: 1px solid var(--border); }
+  .stat-card { background: var(--surface); padding: 20px 28px; display: flex; flex-direction: column; gap: 4px; }
+  .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .stat-value { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 1px; line-height: 1; }
+  .stat-value.green { color: var(--green); }
+  .stat-value.red { color: var(--red); }
+  .stat-value.gold { color: var(--gold); }
+  .stat-value.white { color: var(--text); }
+
+  .main { display: grid; grid-template-columns: 1fr 360px; gap: 0; min-height: calc(100vh - 64px - 78px); }
+  .table-section { border-right: 1px solid var(--border); overflow-y: auto; }
+  .table-toolbar { padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 10; flex-wrap: wrap; gap: 10px; }
+  .toolbar-title { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px; color: var(--muted); }
+  .toolbar-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead { background: var(--surface2); position: sticky; top: 57px; z-index: 5; }
+  th { text-align: left; padding: 12px 20px; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); font-family: 'DM Mono', monospace; font-weight: 500; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; white-space: nowrap; }
+  th:hover { color: var(--text); }
+  td { padding: 14px 20px; font-size: 13px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:hover td { background: rgba(255,255,255,0.02); cursor: pointer; }
+  tr.selected td { background: rgba(41,121,255,0.08); }
+  .player-name { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+  .avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue', sans-serif; font-size: 13px; flex-shrink: 0; }
+  .amount { font-family: 'DM Mono', monospace; font-size: 13px; }
+  .amount.win { color: var(--green); }
+  .amount.lose { color: var(--red); }
+  .amount.neutral { color: var(--muted); }
+
+  .side-panel { background: var(--surface); overflow-y: auto; display: flex; flex-direction: column; }
+  .bet-entry { padding: 20px 24px; border-bottom: 1px solid var(--border); }
+  .bet-entry-title { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 14px; }
+  .selected-player-name { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 1px; color: var(--gold); margin-bottom: 12px; }
+  .history-section { padding: 20px 24px; flex: 1; }
+  .history-title { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 14px; }
+  .history-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .history-player { font-weight: 600; font-size: 13px; }
+  .history-meta { color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; margin-top: 2px; }
+  .history-amount { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; }
+  .tag-win { color: var(--green); }
+  .tag-lose { color: var(--red); }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 28px; width: 420px; max-width: 90vw; max-height: 90vh; overflow-y: auto; }
+  .modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; margin-bottom: 20px; color: var(--gold); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+
+  .empty-state { padding: 40px 24px; text-align: center; color: var(--muted); }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; }
+  .empty-text { font-size: 13px; line-height: 1.5; }
+
+  .readonly-notice { background: rgba(41,121,255,0.08); border: 1px solid rgba(41,121,255,0.2); border-radius: 6px; padding: 10px 14px; font-size: 12px; color: var(--accent); margin-bottom: 12px; }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+  .loading { display: flex; align-items: center; justify-content: center; padding: 60px; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 13px; gap: 10px; }
+  .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 900px) {
+    .main { grid-template-columns: 1fr; }
+    .summary-bar { grid-template-columns: repeat(2, 1fr); }
+    header { padding: 0 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="loginPage">
+  <div class="login-card">
+    <div class="login-logo">Oahu</div>
+    <div class="login-sub">Sign in to access the player dashboard</div>
+    <div class="error-msg" id="loginError"></div>
+    <div class="form-group">
+      <label class="form-label">Username</label>
+      <input type="text" id="loginUsername" placeholder="Enter your username" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input type="password" id="loginPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn btn-primary" id="loginBtn" onclick="doLogin()">Sign In</button>
+  </div>
+</div>
+
+<div id="appPage">
+  <header>
+    <div class="logo">Wynn <span>/ Sảnh Chính</span></div>
+    <div class="header-right">
+      <span id="roleBadge"></span>
+      <span class="user-pill" id="userEmail"></span>
+      <button class="btn btn-ghost btn-sm" onclick="doLogout()">Thoát</button>
+    </div>
+  </header>
+
+  <div class="summary-bar">
+    <div class="stat-card"><div class="stat-label">Tổng Người Chơi</div><div class="stat-value white" id="totalPlayers">—</div></div>
+    <div class="stat-card"><div class="stat-label">Lời</div><div class="stat-value green" id="netWin">—</div></div>
+    <div class="stat-card"><div class="stat-label">Lỗ</div><div class="stat-value red" id="netLoss">—</div></div>
+    <div class="stat-card"><div class="stat-label">Tổng Số Tiền</div><div class="stat-value gold" id="todayBalance">—</div></div>
+  </div>
+
+  <div class="main">
+    <div class="table-section">
+      <div class="table-toolbar">
+        <div class="toolbar-title">ALL PLAYERS</div>
+        <div class="toolbar-actions">
+          <input type="text" class="search-input" placeholder="🔍 Tìm Kiếm...." id="searchInput" oninput="renderTable()" style="width: 180px; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 6px;">
+          <select id="filterSelect" onchange="renderTable()">
+            <option value="all">All</option>
+            <option value="owing">Con Nợ</option>
+            <option value="owed">Tôi Nợ</option>
+            <option value="even">Huề</option>
+          </select>
+          <button class="btn btn-primary btn-sm admin-only" onclick="openAddModal()">+ </button>
+          <button class="btn btn-sm admin-only" id="applyAllBtn" onclick="applyAll()" style="background:var(--green);color:#000;font-weight:700;display:none">✓ Apply All</button>
+          <button class="btn btn-sm admin-only" id="bulkDeleteBtn" onclick="bulkDelete()" style="background:var(--red);color:#fff;font-weight:700;display:none">🗑 Xóa</button>
+        </div>
+      </div>
+      <div id="tableLoading" class="loading"><div class="spinner"></div> Loading players...</div>
+      <table id="playerTable" style="display:none">
+        <thead>
+          <tr>
+            <th style="width:30px"></th>
+            <th style="width:36px;text-align:center"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)" style="cursor:pointer;width:15px;height:15px;accent-color:var(--red)" title="Chọn tất cả"></th>
+            <th onclick="sortBy('name')">Tên</th>
+            <th onclick="sortBy('balance')">Số Dư</th>
+            <th>Đã Cược Hôm Nay</th>
+            <th>Profit</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="playerTableBody"></tbody>
+      </table>
+      <div id="emptyTable" class="empty-state" style="display:none">
+        <div class="empty-icon">📋</div>
+        <div class="empty-text"><br>Thêm Người Chơi để bắt đầu</div>
+      </div>
+    </div>
+
+    <div class="side-panel">
+      <div class="bet-entry">
+        <div class="bet-entry-title">⚡ Quick Bet Entry</div>
+        <div id="viewerNotice" class="readonly-notice" style="display:none">👁 View only — only the admin can record bets</div>
+        <div id="noSelectionMsg" style="color:var(--muted);font-size:13px;">← Chọn player từ bảng</div>
+        <div id="betEntryForm" style="display:none">
+          <div class="selected-player-name" id="selectedPlayerName">—</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px" id="betAmount">—</div>
+          <div style="background:var(--surface2);border-radius:8px;padding:12px;font-size:12px;line-height:2;color:var(--text)">
+            <div>📌 Nhập <b>balance mới</b> của hôm nay</div>
+            <div style="color:var(--muted);font-size:11px">Hệ thống tự tính lời/lỗ</div>
+            <div style="margin-top:8px;padding:8px;background:var(--bg);border-radius:6px;border-left:3px solid var(--green)">
+              <span style="color:var(--muted);font-size:11px">Tuấn balance -150, hôm nay thua thêm</span><br>
+              <span style="color:var(--green);font-family:'DM Mono',monospace">Nhập -300 → balance: -450, bạn lời $300 ✅</span>
+            </div>
+            <div style="margin-top:6px;padding:8px;background:var(--bg);border-radius:6px;border-left:3px solid var(--red)">
+              <span style="color:var(--muted);font-size:11px">Hưng balance 1200, hôm nay thắng thêm</span><br>
+              <span style="color:var(--red);font-family:'DM Mono',monospace">Nhập +200 → balance: 1400, bạn lỗ $200 ❌</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="history-section">
+        <div class="history-title">🕐 Hoạt Động</div>
+        <div id="recentHistory"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <div class="modal-title">➕ Thêm Người Chơi</div>
+    <div class="error-msg" id="addError"></div>
+    <div class="form-group"><label class="form-label">Tên *</label><input type="text" id="newPlayerName" placeholder="v.d ChuTich"></div>
+    <div class="form-group"><label class="form-label">Phone / Contact</label><input type="text" id="newPlayerPhone" placeholder="sdt. 123-1234"></div>
+    <div class="form-group"><label class="form-label">Notes </label><input type="text" id="newPlayerNotes" placeholder="v.d. VIP, NBA, NFL,....."></div>
+    <div class="form-group"><label class="form-label">Bắt đầu $</label><input type="number" id="newPlayerBalance" placeholder="1000" value="1000"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeAddModal()">Cancel</button>
+      <button class="btn btn-primary" style="width:auto" id="addPlayerBtn" onclick="addPlayer()">Add Player</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="detailModal">
+  <div class="modal" style="width:480px">
+    <div class="modal-title" id="detailModalTitle">Player Details</div>
+    <div id="detailModalContent"></div>
+    <div class="modal-actions">
+      <button class="btn btn-red btn-sm admin-only" id="deletePlayerBtn" onclick="deleteSelectedPlayer()">Delete Player</button>
+      <button class="btn btn-ghost" onclick="closeDetailModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── SUPABASE INIT ──────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://qxqjvachliucgdnhhevs.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4cWp2YWNobGl1Y2dkbmhoZXZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MzU0MjcsImV4cCI6MjA5MTExMTQyN30.SPy9rcLOMkRoe5_QHmzf-JQrb2qoSxCG_PNc5fghxwY';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+let currentUser = null;
+let isAdmin = false;
+let players = [];
+let bets = [];
+let selectedPlayerId = null;
+let sortKey = 'sort_order';
+let sortDir = 1;
+
+// ── AUTH ──────────────────────────────────────────────────────────────────
+async function doLogin() {
+  const username = document.getElementById('loginUsername').value.trim().toLowerCase();
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  const btn = document.getElementById('loginBtn');
+  errEl.style.display = 'none';
+  if (!username || !password) { showLoginError('Please enter your username and password.'); return; }
+  btn.disabled = true; btn.textContent = 'Signing in...';
+  const { data, error } = await sb
+    .from('accounts')
+    .select('username, role')
+    .eq('username', username)
+    .eq('password', password)
+    .single();
+  btn.disabled = false; btn.textContent = 'Sign In';
+  if (error || !data) { showLoginError('Wrong username or password. Try again.'); return; }
+  sessionStorage.setItem('bb_user', JSON.stringify({ username: data.username, role: data.role }));
+  initApp(data);
+}
+
+function doLogout() {
+  sessionStorage.removeItem('bb_user');
+  currentUser = null; isAdmin = false; players = []; bets = [];
+  document.getElementById('appPage').style.display = 'none';
+  document.getElementById('loginPage').style.display = 'flex';
+  document.getElementById('loginUsername').value = '';
+  document.getElementById('loginPassword').value = '';
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('loginError');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+async function initApp(account) {
+  currentUser = account;
+  isAdmin = account.role === 'admin';
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('appPage').style.display = 'block';
+  document.getElementById('userEmail').textContent = account.username;
+  document.getElementById('roleBadge').outerHTML = isAdmin
+    ? '<span class="admin-badge" id="roleBadge">CHU TICH</span>'
+    : '<span class="viewer-badge" id="roleBadge">Viewer</span>';
+  document.querySelectorAll('.admin-only').forEach(el => {
+    el.style.display = isAdmin ? '' : 'none';
+  });
+  if (!isAdmin) {
+    document.getElementById('viewerNotice').style.display = 'block';
+  }
+  await loadData();
+}
+
+// ── DATA ──────────────────────────────────────────────────────────────────
+async function loadData() {
+  document.getElementById('tableLoading').style.display = 'flex';
+  document.getElementById('playerTable').style.display = 'none';
+
+  const [{ data: pData }, { data: bData }] = await Promise.all([
+    sb.from('players').select('*').order('sort_order', { ascending: true, nullsFirst: false }),
+    sb.from('bets').select('*').order('created_at', { ascending: false }).limit(50)
+  ]);
+
+  players = pData || [];
+  bets = bData || [];
+
+  document.getElementById('tableLoading').style.display = 'none';
+  document.getElementById('playerTable').style.display = 'table';
+  renderTable();
+  renderHistory();
+}
+
+// ── TABLE ─────────────────────────────────────────────────────────────────
+const COLORS = ['#2979ff','#f5c842','#00e676','#ff3d57','#ab47bc','#ff7043','#26c6da','#ec407a','#66bb6a','#ffa726'];
+function getColor(name) { let h=0; for(let c of name) h=c.charCodeAt(0)+((h<<5)-h); return COLORS[Math.abs(h)%COLORS.length]; }
+function initials(name) { return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
+function fmtMoney(n) { const a=Math.abs(n); const s=a.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); return (n<0?'-':'')+'$'+s; }
+
+function sortBy(key) { if(sortKey===key) sortDir*=-1; else { sortKey=key; sortDir=1; } renderTable(); }
+
+function renderTable() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const filter = document.getElementById('filterSelect').value;
+  let filtered = players.filter(p => {
+    if (search && !p.name.toLowerCase().includes(search)) return false;
+    const db = p.daily_bet || 0;
+    if (filter==='owing' && db >= 0) return false;
+    if (filter==='owed' && db <= 0) return false;
+    if (filter==='even' && db !== 0) return false;
+    return true;
+  });
+  if (sortKey === 'sort_order' || !sortKey) {
+    filtered.sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
+  } else {
+    filtered.sort((a,b) => {
+      let av=a[sortKey]??'', bv=b[sortKey]??'';
+      if(typeof av==='string') av=av.toLowerCase();
+      if(typeof bv==='string') bv=bv.toLowerCase();
+      return av<bv?-sortDir:av>bv?sortDir:0;
+    });
+  }
+  const tbody = document.getElementById('playerTableBody');
+  const empty = document.getElementById('emptyTable');
+  if (filtered.length===0) { tbody.innerHTML=''; empty.style.display='block'; }
+  else {
+    empty.style.display='none';
+    tbody.innerHTML = filtered.map(p => {
+      const dailyBetVal = p.daily_bet || 0;
+      const bal=p.balance, balClass=bal>0?'win':bal<0?'lose':'neutral';
+      const balText = fmtMoney(bal);
+      const color=getColor(p.name);
+      const db = p.daily_bet;
+      let diffHtml;
+      if (db === null || db === undefined || db === 0) {
+        diffHtml = `<span style="color:var(--muted);font-size:11px">—</span>`;
+      } else {
+        const myProfit = -db;
+        const profitColor = myProfit > 0 ? 'var(--green)' : 'var(--red)';
+        diffHtml = `<span style="font-family:'DM Mono',monospace;font-weight:600;color:${profitColor}">${myProfit>0?'+':''}${fmtMoney(myProfit)}</span>`;
+      }
+      const inputCell = isAdmin ? `
+        <td onclick="event.stopPropagation()" style="min-width:180px">
+          <div style="display:flex;gap:6px;align-items:center">
+            <input
+              type="number"
+              id="bal_${p.id}"
+              placeholder="e.g. -300"
+              style="width:110px;padding:6px 10px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;font-family:'DM Mono',monospace;font-size:13px;"
+              onkeydown="if(event.key==='Enter'){event.preventDefault();submitBalanceAndReload('${p.id}')}"
+              oninput="checkApplyAll()"
+              onfocus="this.style.borderColor='var(--accent)'"
+              onblur="this.style.borderColor='var(--border)'"
+            >
+            <button style="background:var(--accent);color:#fff;border:none;padding:6px 12px;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;" onclick="event.stopPropagation();submitBalanceAndReload('${p.id}')">✓</button>
+          </div>
+        </td>` : '<td></td>';
+      return `<tr class="${p.id===selectedPlayerId?'selected':''}" draggable="true" data-id="${p.id}" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropOn(event)" ondragend="dragEnd(event)" style="cursor:grab">
+        <td style="padding:14px 8px;color:var(--muted);cursor:grab;text-align:center" title="Kéo để sắp xếp">⠿</td>
+        <td onclick="event.stopPropagation()" style="text-align:center;padding:14px 8px"><input type="checkbox" class="player-checkbox" data-id="${p.id}" onchange="updateBulkDelete()" style="cursor:pointer;width:15px;height:15px;accent-color:var(--red)"></td>
+        <td onclick="selectPlayer('${p.id}')"><div class="player-name"><div class="avatar" style="background:${color}22;color:${color}">${initials(p.name)}</div>${p.name}</div>${p.phone?`<div style="font-size:11px;color:var(--muted);margin-left:38px">${p.phone}</div>`:''}</td>
+        <td onclick="selectPlayer('${p.id}')"><span class="amount ${balClass}" style="font-size:15px;font-weight:700">${balText}</span></td>
+        ${inputCell}
+        <td onclick="selectPlayer('${p.id}')">${diffHtml}</td>
+        <td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openDetail('${p.id}')">···</button></td>
+      </tr>`;
+    }).join('');
+  }
+  updateSummary();
+}
+
+function updateSummary() {
+  document.getElementById('totalPlayers').textContent = players.length;
+  let myProfit = 0, myLoss = 0;
+  for (const p of players) {
+    myProfit += (p.total_won || 0);
+    myLoss   += (p.total_lost || 0);
+  }
+  const net = myProfit - myLoss;
+  document.getElementById('netWin').textContent = fmtMoney(myProfit);
+  document.getElementById('netLoss').textContent = fmtMoney(myLoss);
+  const el = document.getElementById('todayBalance');
+  el.textContent = fmtMoney(net);
+  el.className = 'stat-value ' + (net > 0 ? 'green' : net < 0 ? 'red' : 'gold');
+}
+
+// ── SELECT PLAYER ─────────────────────────────────────────────────────────
+function selectPlayer(id) {
+  selectedPlayerId = id;
+  const p = players.find(x=>x.id===id);
+  if (!p) return;
+  document.getElementById('noSelectionMsg').style.display='none';
+  document.getElementById('betEntryForm').style.display='block';
+  document.getElementById('selectedPlayerName').textContent = p.name;
+  const bal = p.balance;
+  const balEl = document.getElementById('betAmount');
+  balEl.textContent = 'Balance hiện tại: ' + fmtMoney(bal);
+  renderTable();
+  setTimeout(() => { const inp = document.getElementById('bal_'+id); if(inp) inp.focus(); }, 50);
+}
+
+// ── SUBMIT DAILY BET (THE FIX) ───────────────────────────────────────────
+
+// Call this for individual single-line updates
+async function submitBalanceAndReload(playerId) {
+  await submitBalance(playerId);
+  await loadData();
+}
+
+// Core logic that does NOT reload data (so it doesn't break Apply All)
+async function submitBalance(playerId, overrideValue) {
+  if (!isAdmin) return;
+  const inp = document.getElementById('bal_' + playerId);
+  const todayBet = overrideValue !== undefined ? overrideValue : (inp ? parseFloat(inp.value) : NaN);
+  
+  if (isNaN(todayBet)) {
+    if (inp) { 
+      inp.style.borderColor='var(--red)'; 
+      setTimeout(()=>inp.style.borderColor='var(--border)', 1000); 
+    }
+    return;
+  }
+
+  const p = players.find(x => x.id === playerId);
+  if (!p) return;
+
+  const startingBal = p.starting_balance !== undefined ? p.starting_balance : 1000;
+  const newBal = startingBal + todayBet;
+  const youProfit = todayBet < 0;
+  const amt = Math.abs(todayBet);
+
+  if (inp) inp.disabled = true;
+
+  const { error } = await sb.from('players').update({
+    balance: newBal,
+    daily_bet: todayBet,
+    total_won: youProfit ? amt : 0,
+    total_lost: !youProfit ? amt : 0,
+    bets: (p.bets||0) + 1
+  }).eq('id', playerId);
+
+  if (error) { 
+    console.error('Update error:', error);
+    if (inp) inp.disabled = false; 
+    return; 
+  }
+
+  await sb.from('bets').insert({
+    player_id: playerId,
+    player_name: p.name,
+    outcome: youProfit ? 'win' : 'lose',
+    amount: amt,
+    description: `Đã cược: ${todayBet>0?'+':''}${todayBet} | Số dư: ${startingBal} + ${todayBet} = ${newBal}`
+  });
+
+  if (inp) {
+    inp.value = '';
+    inp.disabled = false;
+    inp.style.borderColor = 'var(--green)';
+    setTimeout(() => inp.style.borderColor = 'var(--border)', 800);
+  }
+}
+
+// ── APPLY ALL ─────────────────────────────────────────────────────────────
+async function applyAll() {
+  if (!isAdmin) return;
+  const inputs = document.querySelectorAll('[id^="bal_"]');
+  const toUpdate = [];
+  
+  inputs.forEach(inp => {
+    const val = parseFloat(inp.value);
+    if (!isNaN(val)) {
+      const id = inp.id.replace('bal_', '');
+      toUpdate.push({ id, value: val });
+    }
+  });
+
+  if (toUpdate.length === 0) return;
+
+  const btn = document.getElementById('applyAllBtn');
+  const originalText = btn.textContent;
+  btn.textContent = '⏳ Updating...';
+  btn.disabled = true;
+
+  // Perform all updates sequentially without re-rendering in between
+  for (const item of toUpdate) {
+    await submitBalance(item.id, item.value);
+  }
+
+  // Reload data ONCE at the end
+  await loadData();
+
+  btn.textContent = originalText;
+  btn.disabled = false;
+  btn.style.display = 'none';
+}
+
+// ── HISTORY ───────────────────────────────────────────────────────────────
+function renderHistory() {
+  const el = document.getElementById('recentHistory');
+  if (bets.length===0) { el.innerHTML='<div style="color:var(--muted);font-size:12px">No activity yet.</div>'; return; }
+  el.innerHTML = bets.slice(0,20).map(h => {
+    const isWin=h.outcome==='win';
+    const d=new Date(h.created_at);
+    const timeStr=d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' '+d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+    return `<div class="history-item">
+      <div><div class="history-player">${h.player_name}</div><div class="history-meta">${h.description||'—'} · ${timeStr}</div></div>
+      <div class="history-amount ${isWin?'tag-lose':'tag-win'}">${isWin?'−':'+'}${fmtMoney(h.amount)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── ADD PLAYER ────────────────────────────────────────────────────────────
+function openAddModal() { document.getElementById('addModal').classList.add('open'); document.getElementById('newPlayerName').focus(); }
+function closeAddModal() { document.getElementById('addModal').classList.remove('open'); document.getElementById('addError').style.display='none'; }
+
+async function addPlayer() {
+  if (!isAdmin) return;
+  const name = document.getElementById('newPlayerName').value.trim();
+  if (!name) { document.getElementById('addError').textContent='Name is required.'; document.getElementById('addError').style.display='block'; return; }
+  const phone = document.getElementById('newPlayerPhone').value.trim();
+  const notes = document.getElementById('newPlayerNotes').value.trim();
+  const balance = parseFloat(document.getElementById('newPlayerBalance').value)||0;
+  const btn = document.getElementById('addPlayerBtn');
+  btn.disabled=true; btn.textContent='Adding...';
+  const maxOrder = players.length > 0 ? Math.max(...players.map(p=>p.sort_order||0)) + 1 : 0;
+  const { error } = await sb.from('players').insert({ name, phone, notes, balance, starting_balance: balance, daily_bet: 0, bets:0, total_won:0, total_lost:0, sort_order: maxOrder });
+  btn.disabled=false; btn.textContent='Add Player';
+  if (error) { document.getElementById('addError').textContent=error.message; document.getElementById('addError').style.display='block'; return; }
+  closeAddModal();
+  document.getElementById('newPlayerName').value='';
+  document.getElementById('newPlayerPhone').value='';
+  document.getElementById('newPlayerNotes').value='';
+  document.getElementById('newPlayerBalance').value='1000';
+  await loadData();
+}
+
+// ── DETAIL MODAL ──────────────────────────────────────────────────────────
+async function openDetail(id) {
+  const p = players.find(x=>x.id===id);
+  if (!p) return;
+  selectedPlayerId=id;
+  document.getElementById('detailModalTitle').textContent=p.name;
+  if (isAdmin) document.getElementById('deletePlayerBtn').style.display='';
+  else document.getElementById('deletePlayerBtn').style.display='none';
+  const playerBets = bets.filter(b=>b.player_id===id).slice(0,15);
+  const balClass=p.balance>0?'win':p.balance<0?'lose':'neutral';
+  document.getElementById('detailModalContent').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+      <div style="background:var(--bg);padding:14px;border-radius:6px;text-align:center">
+        <div class="stat-label">Balance</div>
+        <div class="amount ${balClass}" style="font-size:20px;font-family:'Bebas Neue',sans-serif">${fmtMoney(p.balance)}</div>
+      </div>
+      <div style="background:var(--bg);padding:14px;border-radius:6px;text-align:center">
+        <div class="stat-label">They Won</div>
+        <div class="amount win" style="font-size:16px;font-family:'DM Mono',monospace">${fmtMoney(p.total_won||0)}</div>
+      </div>
+      <div style="background:var(--bg);padding:14px;border-radius:6px;text-align:center">
+        <div class="stat-label">They Lost</div>
+        <div class="amount lose" style="font-size:16px;font-family:'DM Mono',monospace">${fmtMoney(p.total_lost||0)}</div>
+      </div>
+    </div>
+    ${playerBets.length===0?'<div style="color:var(--muted);font-size:12px">No bets recorded yet.</div>':playerBets.map(h=>{
+      const isWin=h.outcome==='win'; const d=new Date(h.created_at);
+      return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px">
+        <div><span style="${isWin?'color:var(--red)':'color:var(--green)'}">● </span>${h.description||'—'}<div style="color:var(--muted);font-size:10px;font-family:'DM Mono',monospace">${d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div></div>
+        <div class="${isWin?'tag-lose':'tag-win'}" style="font-family:'DM Mono',monospace">${isWin?'-':'+'}${fmtMoney(h.amount)}</div>
+      </div>`;
+    }).join('')}`;
+  document.getElementById('detailModal').classList.add('open');
+}
+function closeDetailModal() { document.getElementById('detailModal').classList.remove('open'); }
+
+async function deleteSelectedPlayer() {
+  if (!isAdmin||!confirm('Delete this player and all their bets?')) return;
+  await sb.from('bets').delete().eq('player_id', selectedPlayerId);
+  await sb.from('players').delete().eq('id', selectedPlayerId);
+  selectedPlayerId=null;
+  document.getElementById('noSelectionMsg').style.display='block';
+  document.getElementById('betEntryForm').style.display='none';
+  closeDetailModal();
+  await loadData();
+}
+
+// ── DRAG AND DROP ────────────────────────────────────────────────────────
+let dragSrcId = null;
+function dragStart(e) { dragSrcId = e.currentTarget.dataset.id; e.currentTarget.style.opacity = '0.4'; e.dataTransfer.effectAllowed = 'move'; }
+function dragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; const rows = document.querySelectorAll('#playerTableBody tr'); rows.forEach(r => r.style.borderTop = ''); e.currentTarget.style.borderTop = '2px solid var(--accent)'; return false; }
+function dragEnd(e) { e.currentTarget.style.opacity = '1'; const rows = document.querySelectorAll('#playerTableBody tr'); rows.forEach(r => r.style.borderTop = ''); }
+async function dropOn(e) { e.preventDefault(); const targetId = e.currentTarget.dataset.id; if (!dragSrcId || dragSrcId === targetId) return; const srcIdx = players.findIndex(p => p.id === dragSrcId); const tgtIdx = players.findIndex(p => p.id === targetId); const [moved] = players.splice(srcIdx, 1); players.splice(tgtIdx, 0, moved); players.forEach((p, i) => p.sort_order = i); renderTable(); await Promise.all(players.map((p, i) => sb.from('players').update({ sort_order: i }).eq('id', p.id) )); }
+
+// ── BULK SELECT ──────────────────────────────────────────────────────────
+function toggleSelectAll(cb) { document.querySelectorAll('.player-checkbox').forEach(c => c.checked = cb.checked); updateBulkDelete(); }
+function updateBulkDelete() { const checked = document.querySelectorAll('.player-checkbox:checked'); const btn = document.getElementById('bulkDeleteBtn'); if (btn) { btn.style.display = checked.length > 0 ? '' : 'none'; btn.textContent = `🗑 Xóa (${checked.length})`; } }
+async function bulkDelete() { if (!isAdmin) return; const checked = document.querySelectorAll('.player-checkbox:checked'); if (checked.length === 0) return; if (!confirm(`Xóa ${checked.length} người chơi?`)) return; for (const cb of checked) { await sb.from('bets').delete().eq('player_id', cb.dataset.id); await sb.from('players').delete().eq('id', cb.dataset.id); } await loadData(); }
+function checkApplyAll() { const inputs = document.querySelectorAll('[id^="bal_"]'); const anyFilled = Array.from(inputs).some(i => i.value.trim() !== ''); const btn = document.getElementById('applyAllBtn'); if (btn) btn.style.display = anyFilled ? '' : 'none'; }
+
+// ── BOOT ──────────────────────────────────────────────────────────────────
+(async () => {
+  const saved = sessionStorage.getItem('bb_user');
+  if (saved) {
+    try { await initApp(JSON.parse(saved)); } catch(e) { sessionStorage.removeItem('bb_user'); }
+  }
+})();
+</script>
+</body>
+</html>
